@@ -35,7 +35,7 @@ timeout /t 2 /nobreak >nul
 
 echo [3/4] Actualizando proyecto desde GitHub...
 echo.
-git pull -b dev https://github.com/rizhex/tlcu/
+git pull
 
 if %errorlevel% neq 0 (
     echo.
