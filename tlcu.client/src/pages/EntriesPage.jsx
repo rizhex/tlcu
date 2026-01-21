@@ -15,7 +15,6 @@ import {
   NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
 
-// Componentes placeholder (los crearemos después)
 import EntryList from '../components/entry/EntryList';
 import EntryForm from '../components/entry/EntryForm';
 import EntryDetail from '../components/entry/EntryDetail';

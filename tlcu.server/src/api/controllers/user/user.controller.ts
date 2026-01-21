@@ -35,15 +35,16 @@ import { JwtAuthGuard } from 'src/infrastructure/modules/auth/jwt-auth.guard';
 import { User } from 'src/core/entities/user.entity';
 
 @ApiTags('Users')
-@ApiBearerAuth('JWT-auth')
 @Controller('users')
-@UseInterceptors(ClassSerializerInterceptor)
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN) 
+@UseInterceptors(ClassSerializerInterceptor)
+
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all users with pagination' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -59,7 +60,6 @@ export class UserController {
   }
 
   @Get('search')
-  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Search users by query' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -76,7 +76,6 @@ export class UserController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -93,7 +92,6 @@ export class UserController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({
@@ -111,7 +109,6 @@ export class UserController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN, UserRole.EDITOR)
   @ApiOperation({ summary: 'Update user by ID' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -136,7 +133,6 @@ export class UserController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete user by ID' })
   @ApiResponse({

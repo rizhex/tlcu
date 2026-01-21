@@ -1,5 +1,5 @@
 import { Typography, Button, Box, Paper } from '@mui/material';
-import { Book, Search, LibraryBooks } from '@mui/icons-material';
+import { Book, Search, LibraryBooks, People } from '@mui/icons-material'; // Agregar People icon
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -46,6 +46,23 @@ export default function HomePage() {
               onClick={() => navigate('/dictionaries')}
             >
               Ver Diccionarios
+            </Button>
+          </Paper>
+        )}
+        
+        {/* Tarjeta de Gestión de Usuarios (solo admin) */}
+        {isAuthenticated && role === 'admin' && (
+          <Paper sx={{ p: 3, flex: 1 }}>
+            <People sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h6" gutterBottom>Usuarios</Typography>
+            <Typography variant="body2" paragraph>
+              Administra usuarios, roles y permisos del sistema
+            </Typography>
+            <Button 
+              variant="contained"
+              onClick={() => navigate('/admin/users')}
+            >
+              Gestionar Usuarios
             </Button>
           </Paper>
         )}

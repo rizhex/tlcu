@@ -2,8 +2,14 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
+// Asegúrate que la URL base no termine con /
+const getBaseUrl = () => {
+  const base = import.meta.env.VITE_API_URL;
+  return base.endsWith('/') ? base.slice(0, -1) : base;
+};
+
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getBaseUrl(),  // Usa la función que limpia la URL
   headers: {
     'Content-Type': 'application/json',
   },

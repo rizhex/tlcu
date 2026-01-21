@@ -6,7 +6,8 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SearchPage from './pages/SearchPage';
 import DictionariesPage from './pages/DictionariesPage';
-import EntriesPage from './pages/EntriesPage'; // ← Nuevo import
+import EntriesPage from './pages/EntriesPage'; 
+import UsersPage from './pages/UsersPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 const theme = createTheme({
@@ -39,7 +40,15 @@ function App() {
                   <DictionariesPage />
                 </ProtectedRoute>
               } />
-              
+              {/* Gestion de usuarios - Solo admin */}
+              <Route 
+                path="/admin/users" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <UsersPage />
+                  </ProtectedRoute>
+                } 
+              />
               {/* Entradas de diccionario - Solo admin/editor */}
               <Route path="/dictionaries/:id/entries" element={
                 <ProtectedRoute allowedRoles={['admin', 'editor']}>
