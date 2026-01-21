@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './infrastructure/modules/user/user.module';
@@ -17,17 +18,25 @@ import { Definition } from './core/entities/definition.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'admin',
-      database: 'tesoro_lexicografico_db',
-      entities: [Dictionary, Author, Entry, User, Definition], 
-      synchronize: false,
-      retryDelay: 3001,
-      retryAttempts: 10
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [Dictionary, Author, Entry, User, Definition],
+        synchronize: configService.get<boolean>('DB_SYNCHRONIZE', false),
+        retryDelay: configService.get<number>('DB_RETRY_DELAY', 3001),
+        retryAttempts: configService.get<number>('DB_RETRY_ATTEMPTS', 10),
+      }),
+      inject: [ConfigService],
     }),
     UserModule,
     DictionaryModule,
@@ -35,9 +44,9 @@ import { Definition } from './core/entities/definition.entity';
     DefinitionModule,
     AuthorModule,
     OcrModule,
-    AuthModule
+    AuthModule,
   ],
-  controllers: [AppController], 
-  providers: [AppService],      
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
