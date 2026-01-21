@@ -143,7 +143,6 @@ export const processOcrFromFile = async (file, language = 'spa') => {
 export default {
   processOcr,
   processBatchOcr,
-  checkOcrHealth,
   processOcrFromBase64,
   processOcrFromFile
 };
