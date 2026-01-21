@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Paper,
@@ -10,22 +9,17 @@ import {
   CircularProgress,
   Alert,
   Grid,
-  Divider,
-  IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Divider
 } from '@mui/material';
 import { 
   ArrowBack as BackIcon, 
   Save as SaveIcon,
-  Close as CloseIcon,
   Add as AddIcon,
   Book as BookIcon
 } from '@mui/icons-material';
 
-import { CLASES_PALABRA, CLASIFICACIONES_ONTOLOGICAS } from '../../utils/entryConstants';
+import DefinitionForm from '../definition/DefinitionForm';
+import OcrModal from '../ocr/OcrModal';
 
 export default function EntryForm({ 
   entry = null,
@@ -43,8 +37,10 @@ export default function EntryForm({
 
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
+  const [ocrModalOpen, setOcrModalOpen] = useState(false);
+  const [currentDefinitionIndex, setCurrentDefinitionIndex] = useState(null);
 
-  // Inicializar con datos de la entrada (si está en modo edición)
+  // Inicializar con datos de la entrada
   useEffect(() => {
     if (entry && entry.id) {
       setFormData({
@@ -62,7 +58,6 @@ export default function EntryForm({
         })) || []
       });
     } else {
-      // Resetear formulario para creación
       setFormData({
         id: null,
         name: '',
@@ -70,7 +65,7 @@ export default function EntryForm({
         definitions: []
       });
     }
-    setSubmitError(''); // Limpiar errores al cambiar entrada
+    setSubmitError('');
   }, [entry]);
 
   const handleChange = (e) => {
@@ -83,11 +78,10 @@ export default function EntryForm({
     if (submitError) setSubmitError('');
   };
 
-  const handleDefinitionChange = (index, e) => {
-    const { name, value } = e.target;
+  const handleDefinitionUpdate = (index, updatedDefinition) => {
     setFormData(prev => {
       const newDefinitions = [...prev.definitions];
-      newDefinitions[index] = { ...newDefinitions[index], [name]: value };
+      newDefinitions[index] = updatedDefinition;
       return { ...prev, definitions: newDefinitions };
     });
   };
@@ -117,6 +111,41 @@ export default function EntryForm({
     }));
   };
 
+  const openOcrModal = (index) => {
+    setCurrentDefinitionIndex(index);
+    setOcrModalOpen(true);
+  };
+
+ const applyOcrText = (text, definitionIndex) => {
+    if (definitionIndex === null) return;
+    
+    console.log('✅ Aplicando texto OCR a definición', definitionIndex);
+    console.log('Texto recibido:', text.substring(0, 100) + '...');
+    
+    setFormData(prev => {
+      const newDefinitions = [...prev.definitions];
+      const currentDef = newDefinitions[definitionIndex];
+      const currentText = currentDef?.defText || '';
+      const separator = currentText ? '\n\n' : '';
+      
+      newDefinitions[definitionIndex] = {
+        ...currentDef,
+        defText: currentText + separator + text
+      };
+      
+      console.log('📝 Definición actualizada:', {
+        anterior: currentText.length,
+        nuevo: newDefinitions[definitionIndex].defText.length,
+        diferencia: text.length
+      });
+      
+      return { ...prev, definitions: newDefinitions };
+    });
+    
+    setOcrModalOpen(false);
+    
+    alert(`✅ Texto aplicado a la Definición #${definitionIndex + 1} (${text.length} caracteres)`);
+  };
   const validateForm = () => {
     const newErrors = {};
     
@@ -145,7 +174,6 @@ export default function EntryForm({
       return;
     }
     
-    // Preparar datos para enviar
     const dataToSend = {
       ...formData,
       dictionaryId: parseInt(dictionaryId),
@@ -161,270 +189,161 @@ export default function EntryForm({
   };
 
   return (
-    <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Encabezado */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
-          {formData.id ? 'Editar Entrada' : 'Nueva Entrada'}
-          <Typography variant="caption" display="block" color="text.secondary">
-            Diccionario ID: {dictionaryId}
-            {formData.id && ` | Entrada ID: ${formData.id}`}
-          </Typography>
-        </Typography>
-        
-        <Button
-          startIcon={<BackIcon />}
-          onClick={onCancel}
-          variant="outlined"
-          size="small"
-          disabled={loading}
-        >
-          Cancelar
-        </Button>
-      </Box>
-
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {submitError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {submitError}
-        </Alert>
-      )}
-
-      <Box component="form" onSubmit={handleSubmit}>
-        {/* Sección 1: Información básica de la entrada */}
-        <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: 'primary.light', color: 'white' }}>
-          <Typography variant="h6" gutterBottom>
-            Información Básica de la Palabra
-          </Typography>
-          <Typography variant="body2">
-            Los campos marcados con * son obligatorios. Las definiciones son opcionales.
-          </Typography>
-        </Paper>
-
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              required
-              label="Palabra *"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              error={!!errors.name}
-              helperText={errors.name || 'Nombre principal de la palabra'}
-              disabled={loading}
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Forma registrada"
-              name="regName"
-              value={formData.regName}
-              onChange={handleChange}
-              disabled={loading}
-              helperText="Forma normalizada o registrada (opcional)"
-            />
-          </Grid>
-        </Grid>
-
-        <Divider sx={{ mb: 4 }} />
-
-        {/* Sección 2: Definiciones - Ahora opcional */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6" sx={{ color: 'primary.main' }}>
-              <BookIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-              Definiciones (Opcional)
+    <>
+      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
+        {/* Encabezado */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+            {formData.id ? 'Editar Entrada' : 'Nueva Entrada'}
+            <Typography variant="caption" display="block" color="text.secondary">
+              Diccionario ID: {dictionaryId}
+              {formData.id && ` | Entrada ID: ${formData.id}`}
             </Typography>
-            
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={addDefinition}
-              disabled={loading}
-              size="small"
-            >
-              Agregar Definición
-            </Button>
-          </Box>
-          
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Puedes agregar una o más definiciones para esta palabra, o dejarla sin definiciones para añadirlas después.
           </Typography>
-
-          {formData.definitions.length === 0 ? (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              Esta entrada no tiene definiciones. Puedes agregar una usando el botón arriba o guardar sin definiciones.
-            </Alert>
-          ) : (
-            <>
-              {formData.definitions.map((def, index) => (
-                <Paper key={def.id || `new-${index}`} elevation={1} sx={{ p: 3, mb: 3, position: 'relative' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="medium">
-                      Definición #{def.senseNumber || index + 1}
-                      {def.id && <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>(ID: {def.id})</Typography>}
-                    </Typography>
-                    
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => removeDefinition(index)}
-                      disabled={loading}
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </Box>
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Texto de la definición"
-                        name="defText"
-                        value={def.defText}
-                        onChange={(e) => handleDefinitionChange(index, e)}
-                        multiline
-                        rows={3}
-                        error={!!errors[`defText_${index}`]}
-                        helperText={errors[`defText_${index}`] || 'Texto de la definición (opcional)'}
-                        disabled={loading}
-                        placeholder="Ej: Planta herbácea de la familia..."
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Etimología"
-                        name="etymology"
-                        value={def.etymology}
-                        onChange={(e) => handleDefinitionChange(index, e)}
-                        disabled={loading}
-                        placeholder="Ej: Del latín 'herba'"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth>
-                        <InputLabel id={`wordClass-label-${index}`}>Clase de palabra</InputLabel>
-                        <Select
-                          labelId={`wordClass-label-${index}`}
-                          name="wordClass"
-                          value={def.wordClass || ''}
-                          onChange={(e) => handleDefinitionChange(index, e)}
-                          label="Clase de palabra"
-                          disabled={loading}
-                        >
-                          <MenuItem value="">
-                            <em>Seleccionar clase...</em>
-                          </MenuItem>
-                          {CLASES_PALABRA.map((clase) => (
-                            <MenuItem key={clase} value={clase}>
-                              {clase}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth>
-                        <InputLabel id={`ontologicalClassification-label-${index}`}>
-                          Clasificación ontológica
-                        </InputLabel>
-                        <Select
-                          labelId={`ontologicalClassification-label-${index}`}
-                          name="ontologicalClassification"
-                          value={def.ontologicalClassification || ''}
-                          onChange={(e) => handleDefinitionChange(index, e)}
-                          label="Clasificación ontológica"
-                          disabled={loading}
-                          MenuProps={{
-                            PaperProps: {
-                              style: {
-                                maxHeight: 300,
-                              },
-                            },
-                          }}
-                        >
-                          <MenuItem value="">
-                            <em>Seleccionar clasificación...</em>
-                          </MenuItem>
-                          {CLASIFICACIONES_ONTOLOGICAS.map((clasificacion) => (
-                            <MenuItem key={clasificacion} value={clasificacion}>
-                              {clasificacion}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Número de acepción"
-                        name="senseNumber"
-                        type="number"
-                        value={def.senseNumber}
-                        onChange={(e) => handleDefinitionChange(index, e)}
-                        disabled={loading}
-                        InputProps={{ inputProps: { min: 1 } }}
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Observaciones"
-                        name="remarks"
-                        value={def.remarks}
-                        onChange={(e) => handleDefinitionChange(index, e)}
-                        multiline
-                        rows={2}
-                        disabled={loading}
-                        placeholder="Notas adicionales sobre esta definición"
-                      />
-                    </Grid>
-                  </Grid>
-                </Paper>
-              ))}
-              
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={addDefinition}
-                  disabled={loading}
-                >
-                  Agregar otra definición
-                </Button>
-              </Box>
-            </>
-          )}
+          
+          <Button
+            startIcon={<BackIcon />}
+            onClick={onCancel}
+            variant="outlined"
+            size="small"
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
         </Box>
 
-        {/* Botones de acción */}
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-            disabled={loading}
-            sx={{ minWidth: '120px' }}
-          >
-            {loading ? 'Guardando...' : (formData.id ? 'Actualizar' : 'Crear')}
-          </Button>
-        </Stack>
-      </Box>
-    </Paper>
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+            <CircularProgress />
+          </Box>
+        )}
+
+        {submitError && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {submitError}
+          </Alert>
+        )}
+
+        <Box component="form" onSubmit={handleSubmit}>
+          {/* Sección 1: Información básica de la entrada */}
+          <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: 'primary.light', color: 'white' }}>
+            <Typography variant="h6" gutterBottom>
+              Información Básica de la Palabra
+            </Typography>
+            <Typography variant="body2">
+              Los campos marcados con * son obligatorios. Las definiciones son opcionales.
+            </Typography>
+          </Paper>
+
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                required
+                label="Palabra *"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                error={!!errors.name}
+                helperText={errors.name || 'Nombre principal de la palabra'}
+                disabled={loading}
+              />
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Forma registrada"
+                name="regName"
+                value={formData.regName}
+                onChange={handleChange}
+                disabled={loading}
+                helperText="Forma normalizada o registrada (opcional)"
+              />
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ mb: 4 }} />
+
+          {/* Sección 2: Definiciones */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ color: 'primary.main' }}>
+                <BookIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+                Definiciones (Opcional)
+              </Typography>
+              
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={addDefinition}
+                disabled={loading}
+                size="small"
+              >
+                Agregar Definición
+              </Button>
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Puedes agregar una o más definiciones para esta palabra, o dejarla sin definiciones para añadirlas después.
+            </Typography>
+
+            {formData.definitions.length === 0 ? (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                Esta entrada no tiene definiciones. Puedes agregar una usando el botón arriba o guardar sin definiciones.
+              </Alert>
+            ) : (
+              <>
+                {formData.definitions.map((def, index) => (
+                  <DefinitionForm
+                    key={def.id || `new-${index}`}
+                    definition={def}
+                    index={index}
+                    onUpdate={handleDefinitionUpdate}
+                    onRemove={removeDefinition}
+                    onOpenOcr={openOcrModal}
+                    loading={loading}
+                  />
+                ))}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={addDefinition}
+                    disabled={loading}
+                  >
+                    Agregar otra definición
+                  </Button>
+                </Box>
+              </>
+            )}
+          </Box>
+
+          {/* Botones de acción */}
+          <Stack direction="row" spacing={2} justifyContent="flex-end">
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+              disabled={loading}
+              sx={{ minWidth: '120px' }}
+            >
+              {loading ? 'Guardando...' : (formData.id ? 'Actualizar' : 'Crear')}
+            </Button>
+          </Stack>
+        </Box>
+      </Paper>
+
+      {/* Modal de OCR */}
+      <OcrModal
+        open={ocrModalOpen}
+        onClose={() => setOcrModalOpen(false)}
+        onApplyText={applyOcrText}
+        currentDefinitionIndex={currentDefinitionIndex}
+        loading={loading}
+      />
+    </>
   );
 }
